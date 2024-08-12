@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vibration Analysis FFT</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/fft.js/dist/fft.min.js"></script>
+</head>
+<body>
+    <h1>Vibration Analysis - FFT</h1>
+    <canvas id="fftChart" width="400" height="200"></canvas>
+
+    <script>
+        // Configuración de Firebase (reemplaza con tus valores)
+        var firebaseConfig = {
+            apiKey: "tu_apiKey",
+            authDomain: "tu_authDomain",
+            databaseURL: "tu_databaseURL",
+            projectId: "tu_projectId",
+            storageBucket: "tu_storageBucket",
+            messagingSenderId: "tu_messagingSenderId",
+            appId: "tu_appId"
+        };
+        firebase.initializeApp(firebaseConfig);
+
+        // Referencia a la base de datos
+        var database = firebase.database();
+
+        // Configuración del gráfico FFT
+        var ctx = document.getElementById('fftChart').getContext('2d');
+        var fftChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [], // Frecuencias
+                datasets: [{
+                    label: 'FFT Magnitude',
+                    data: [],
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1,
+                    fill: false
+                }]
+            },
+            options: {
+                scales: {
+                    x: {
+                        type: 'linear',
+                        position: 'bottom'
+                    },
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+
+        // Escuchar los cambios en Firebase
+        database.ref('/vibration/timestamp1').on('value', (snapshot) => {
+            var data = snapshot.val();
+            var xData = data.x;
+
+            // Realizar FFT
+            var fft = new FFT(xData.length);
+            var phasors = fft.createComplexArray();
+            fft.realTransform(phasors, xData);
+            fft.completeSpectrum(phasors);
+
+            // Calcular la magnitud y las frecuencias
+            var magnitudes = phasors.map((complex) => Math.sqrt(complex[0] ** 2 + complex[1] ** 2));
+            var frequencies = [...Array(magnitudes.length).keys()]; // Frecuencias simuladas
+
+            // Actualizar el gráfico
+            fftChart.data.labels = frequencies;
+            fftChart.data.datasets[0].data = magnitudes;
+            fftChart.update();
+        });
+    </script>
+</body>
+</html>
